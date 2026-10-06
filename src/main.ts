@@ -1,7 +1,7 @@
 import { Plugin, Notice, TFile } from 'obsidian';
 import { BookOrbitClient } from './api';
 import { DEFAULT_TEMPLATE } from './template';
-import { createBookNote, type NoteCreationOptions } from './notes';
+import { createBookNote, type NoteCreationOptions, updateBookNote } from './notes';
 import { BookSearchModal } from './ui';
 import { DEFAULT_SETTINGS, BookOrbitSettingTab, type BookOrbitSettings } from './settings';
 
@@ -26,6 +26,15 @@ export default class BookOrbitPlugin extends Plugin {
 			},
 		});
 
+		// Add update command
+		this.addCommand({
+			id: 'update-current-note',
+			name: 'Update current book note',
+			callback: () => {
+				void this.updateCurrentNote();
+			},
+		});
+
 		// Add settings tab
 		this.addSettingTab(new BookOrbitSettingTab(this));
 	}
@@ -43,6 +52,13 @@ export default class BookOrbitPlugin extends Plugin {
 			{},
 			DEFAULT_SETTINGS.statusMap,
 			saved?.statusMap ?? {},
+		);
+		// Merge updateMappings by templateVar so new defaults appear in existing vaults
+		const savedMappings = new Map(
+			(saved?.updateMappings ?? []).map((m) => [m.templateVar, m]),
+		);
+		this.settings.updateMappings = DEFAULT_SETTINGS.updateMappings.map(
+			(def) => savedMappings.get(def.templateVar) ?? def,
 		);
 	}
 
@@ -142,5 +158,66 @@ export default class BookOrbitPlugin extends Plugin {
 			}
 		}
 		return DEFAULT_TEMPLATE;
+	}
+
+	private async updateCurrentNote(): Promise<void> {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice('No active file.');
+			return;
+		}
+
+		const cache = this.app.metadataCache.getFileCache(file);
+		const fm = cache?.frontmatter;
+		if (!fm) {
+			new Notice('Active file has no frontmatter.');
+			return;
+		}
+
+		const idKey = this.settings.bookorbitIdKey;
+		const rawId = (fm as Record<string, unknown>)[idKey];
+		if (rawId === undefined || rawId === null) {
+			new Notice(`Active file doesn't have a "${idKey}" property.`);
+			return;
+		}
+
+		const bookorbitId = Number(rawId);
+		if (!Number.isFinite(bookorbitId)) {
+			new Notice(`"${idKey}" is not a valid number.`);
+			return;
+		}
+
+		const password = await this.getPassword();
+		if (!this.settings.serverUrl || !this.settings.username || !password) {
+			new Notice('Please configure your BookOrbit connection in settings.');
+			return;
+		}
+
+		if (!this.client) {
+			this.client = new BookOrbitClient(
+				this.settings.serverUrl,
+				this.settings.username,
+				password,
+			);
+		}
+
+		try {
+			new Notice('Fetching book data…');
+			const bookData = await this.client.getBookDetail(
+				bookorbitId,
+				this.settings.statusMap,
+			);
+			await updateBookNote(this.app, file, bookData, {
+				mappings: this.settings.updateMappings,
+				bookorbitIdKey: this.settings.bookorbitIdKey,
+				dateFormat: this.settings.dateFormat,
+				filenameTemplate: this.settings.filenameTemplate,
+				outputFolder: this.settings.outputFolder,
+			});
+		} catch (err) {
+			new Notice(
+				`Failed to update: ${err instanceof Error ? err.message : String(err)}`,
+			);
+		}
 	}
 }

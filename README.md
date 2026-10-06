@@ -65,6 +65,17 @@ The following variables are available in your note template:
 4. Select a book from the results
 5. The plugin will create a note using your template
 
+## Updating a book note
+
+1. Open a book note that has your configured BookOrbit ID property (default `bookorbitID`) in its frontmatter
+2. Press `Ctrl/Cmd + P` and run "Update current book note"
+3. The plugin fetches fresh data from BookOrbit and rewrites the enabled frontmatter properties
+
+Configure which properties update in **Settings → BookOrbit → Note updates**: each row maps a
+template variable (e.g. `{{title}}`) to a frontmatter key (e.g. `title`) with an on/off checkbox.
+If your filename template (e.g. `{{title}} ({{year}})`) uses an updated variable and the rendered
+name changed, the file is renamed automatically.
+
 ## Development
 
 ```bash

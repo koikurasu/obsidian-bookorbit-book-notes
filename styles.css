@@ -26,3 +26,54 @@
 	color: var(--text-muted);
 	font-style: italic;
 }
+
+.bookorbit-update-desc {
+	margin-bottom: 8px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.bookorbit-update-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 16px;
+}
+
+.bookorbit-update-table th {
+	text-align: left;
+	padding: 4px 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.bookorbit-update-table th.bookorbit-update-check-col {
+	text-align: center;
+}
+
+.bookorbit-update-table tbody tr {
+	border-bottom: 1px solid var(--background-modifier-border-hover);
+}
+
+.bookorbit-update-table td.bookorbit-update-var {
+	padding: 5px 8px;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	white-space: nowrap;
+}
+
+.bookorbit-update-table td.bookorbit-update-key {
+	padding: 3px 8px;
+}
+
+.bookorbit-update-table td.bookorbit-update-key input {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.bookorbit-update-table td.bookorbit-update-check {
+	padding: 3px 8px;
+	text-align: center;
+}

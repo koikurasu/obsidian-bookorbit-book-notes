@@ -1,6 +1,41 @@
 import { PluginSettingTab, Setting, SecretComponent, Notice } from 'obsidian';
 import type BookOrbitPlugin from './main';
 
+export interface UpdateMapping {
+	templateVar: string;
+	frontmatterKey: string;
+	enabled: boolean;
+}
+
+export const DEFAULT_UPDATE_MAPPINGS: UpdateMapping[] = [
+	{ templateVar: 'title', frontmatterKey: 'title', enabled: true },
+	{ templateVar: 'subtitle', frontmatterKey: 'subtitle', enabled: true },
+	{ templateVar: 'authorsArray', frontmatterKey: 'author', enabled: true },
+	{ templateVar: 'publishedYear', frontmatterKey: 'year', enabled: true },
+	{ templateVar: 'publishedDate', frontmatterKey: 'releaseDate', enabled: false },
+	{ templateVar: 'isbn13', frontmatterKey: 'isbn', enabled: false },
+	{ templateVar: 'isbn10', frontmatterKey: 'isbn10', enabled: false },
+	{ templateVar: 'publisher', frontmatterKey: 'publisher', enabled: false },
+	{ templateVar: 'language', frontmatterKey: 'language', enabled: false },
+	{ templateVar: 'pageCount', frontmatterKey: 'pages', enabled: true },
+	{ templateVar: 'genresArray', frontmatterKey: 'genres', enabled: true },
+	{ templateVar: 'description', frontmatterKey: 'plot', enabled: false },
+	{ templateVar: 'cover', frontmatterKey: 'image', enabled: false },
+	{ templateVar: 'status', frontmatterKey: 'status', enabled: true },
+	{ templateVar: 'rating', frontmatterKey: 'rating', enabled: false },
+	{ templateVar: 'startedAt', frontmatterKey: 'startDate', enabled: true },
+	{ templateVar: 'finishedAt', frontmatterKey: 'endDate', enabled: true },
+	{ templateVar: 'goodreadsRating', frontmatterKey: 'goodreadsRating', enabled: false },
+	{ templateVar: 'hardcoverRating', frontmatterKey: 'hardcoverRating', enabled: false },
+	{ templateVar: 'goodreadsId', frontmatterKey: 'goodreadsID', enabled: false },
+	{ templateVar: 'hardcoverId', frontmatterKey: 'hardcoverID', enabled: false },
+	{ templateVar: 'biblioreadsUrl', frontmatterKey: 'biblioreadsUrl', enabled: false },
+	{ templateVar: 'hardcoverUrl', frontmatterKey: 'hardcoverUrl', enabled: false },
+	{ templateVar: 'bookorbitUrl', frontmatterKey: 'bookorbitUrl', enabled: false },
+	{ templateVar: 'seriesName', frontmatterKey: 'seriesName', enabled: false },
+	{ templateVar: 'seriesIndex', frontmatterKey: 'seriesIndex', enabled: false },
+];
+
 export interface BookOrbitSettings {
 	serverUrl: string;
 	username: string;
@@ -15,6 +50,8 @@ export interface BookOrbitSettings {
 	coverFolder: string;
 	maxSearchResults: number;
 	statusMap: Record<string, string>;
+	bookorbitIdKey: string;
+	updateMappings: UpdateMapping[];
 }
 
 export const DEFAULT_SETTINGS: BookOrbitSettings = {
@@ -30,6 +67,8 @@ export const DEFAULT_SETTINGS: BookOrbitSettings = {
 	downloadCovers: true,
 	coverFolder: 'books/covers',
 	maxSearchResults: 10,
+	bookorbitIdKey: 'bookorbitID',
+	updateMappings: DEFAULT_UPDATE_MAPPINGS,
 	statusMap: {
 		abandoned: 'did not finish',
 		on_hold: 'paused',
@@ -295,6 +334,86 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						}),
 				);
+		}
+
+		// Note updates section
+		new Setting(containerEl)
+			.setName('Note updates')
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName('BookOrbit ID property')
+			.setDesc('Frontmatter key used to identify a book note (used by "update current book note").')
+			.addText((text) =>
+				text
+					.setPlaceholder('bookorbitID')
+					.setValue(this.plugin.settings.bookorbitIdKey)
+					.onChange(async (value) => {
+						this.plugin.settings.bookorbitIdKey = value.trim() || 'bookorbitID';
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		const updateDesc = containerEl.createEl('p', { cls: 'bookorbit-update-desc' });
+		updateDesc.setText(
+			'Choose which properties to refresh when updating a note. ' +
+			'Set the frontmatter key to match your template and tick the box to enable.',
+		);
+
+		const table = containerEl.createEl('table', { cls: 'bookorbit-update-table' });
+
+		// Header row
+		const thead = table.createEl('thead');
+		const headerRow = thead.createEl('tr');
+		const headers = ['Template variable', 'Frontmatter key', 'Update'];
+		for (const h of headers) {
+			const th = headerRow.createEl('th');
+			th.setText(h);
+			if (h === 'Update') th.addClass('bookorbit-update-check-col');
+		}
+
+		// Body rows
+		const tbody = table.createEl('tbody');
+		for (let i = 0; i < this.plugin.settings.updateMappings.length; i++) {
+			const mapping = this.plugin.settings.updateMappings[i];
+			if (!mapping) continue;
+
+			const row = tbody.createEl('tr');
+
+			// Template variable cell
+			const varTd = row.createEl('td', { cls: 'bookorbit-update-var' });
+			varTd.setText('{{' + mapping.templateVar + '}}');
+
+			// Frontmatter key cell
+			const keyTd = row.createEl('td', { cls: 'bookorbit-update-key' });
+
+			const keyInput = keyTd.createEl('input');
+			keyInput.type = 'text';
+			keyInput.value = mapping.frontmatterKey;
+			keyInput.addClass('setting-item-input');
+
+			const idx = i;
+			keyInput.addEventListener('change', () => {
+				const m = this.plugin.settings.updateMappings[idx];
+				if (m) {
+					m.frontmatterKey = keyInput.value.trim() || m.templateVar;
+					void this.plugin.saveSettings();
+				}
+			});
+
+			// Enabled checkbox cell
+			const checkTd = row.createEl('td', { cls: 'bookorbit-update-check' });
+
+			const checkbox = checkTd.createEl('input');
+			checkbox.type = 'checkbox';
+			checkbox.checked = mapping.enabled;
+			checkbox.addEventListener('change', () => {
+				const m = this.plugin.settings.updateMappings[idx];
+				if (m) {
+					m.enabled = checkbox.checked;
+					void this.plugin.saveSettings();
+				}
+			});
 		}
 	}
 }
