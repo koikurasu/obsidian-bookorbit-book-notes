@@ -261,13 +261,18 @@ export class BookOrbitClient {
 			detail.communityRatings.find((r) => r.provider === 'hardcover')
 				?.rating || null;
 
-		// Map read status using caller-supplied map, with built-in fallback
+		// Map read status using caller-supplied map, with built-in fallback.
+		// Keys must match the lowercase BookOrbit API values (see READ_STATUSES).
 		const resolvedStatusMap: Record<string, string> = Object.assign(
 			{
+				unread: 'Unread',
+				want_to_read: 'Want to read',
 				reading: 'Reading',
-				completed: 'Completed',
-				'to-read': 'To Read',
-				dropped: 'Dropped',
+				on_hold: 'On hold',
+				rereading: 'Rereading',
+				read: 'Read',
+				skimmed: 'Skimmed',
+				abandoned: 'Abandoned',
 			},
 			statusMap ?? {},
 		);

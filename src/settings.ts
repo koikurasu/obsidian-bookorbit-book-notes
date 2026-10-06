@@ -70,11 +70,14 @@ export const DEFAULT_SETTINGS: BookOrbitSettings = {
 	bookorbitIdKey: 'bookorbitID',
 	updateMappings: DEFAULT_UPDATE_MAPPINGS,
 	statusMap: {
-		abandoned: 'did not finish',
-		on_hold: 'paused',
-		read: 'done',
-		Reading: 'started',
+		unread: 'unread',
 		want_to_read: 'not started',
+		reading: 'started',
+		on_hold: 'paused',
+		rereading: 'rereading',
+		read: 'done',
+		skimmed: 'skimmed',
+		abandoned: 'did not finish',
 	},
 };
 
@@ -315,11 +318,14 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 			);
 
 		const STATUS_KEYS: { key: string; label: string }[] = [
-			{ key: 'abandoned', label: 'Abandoned' },
-			{ key: 'on_hold', label: 'On hold' },
-			{ key: 'read', label: 'Read' },
-			{ key: 'Reading', label: 'Reading' },
+			{ key: 'unread', label: 'Unread' },
 			{ key: 'want_to_read', label: 'Want to read' },
+			{ key: 'reading', label: 'Reading' },
+			{ key: 'on_hold', label: 'On hold' },
+			{ key: 'rereading', label: 'Rereading' },
+			{ key: 'read', label: 'Read' },
+			{ key: 'skimmed', label: 'Skimmed' },
+			{ key: 'abandoned', label: 'Abandoned' },
 		];
 
 		for (const { key, label } of STATUS_KEYS) {

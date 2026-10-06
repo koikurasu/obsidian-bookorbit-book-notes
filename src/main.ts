@@ -53,6 +53,18 @@ export default class BookOrbitPlugin extends Plugin {
 			DEFAULT_SETTINGS.statusMap,
 			saved?.statusMap ?? {},
 		);
+		// Migrate stale keys from older versions: capitalized 'Reading', and
+		// legacy 'completed' / 'to-read' / 'dropped' that the API never returns
+		if (this.settings.statusMap['Reading'] !== undefined) {
+			if (this.settings.statusMap['reading'] === undefined) {
+				this.settings.statusMap['reading'] =
+					this.settings.statusMap['Reading'];
+			}
+			delete this.settings.statusMap['Reading'];
+		}
+		for (const stale of ['completed', 'to-read', 'dropped']) {
+			delete this.settings.statusMap[stale];
+		}
 		// Merge updateMappings by templateVar so new defaults appear in existing vaults
 		const savedMappings = new Map(
 			(saved?.updateMappings ?? []).map((m) => [m.templateVar, m]),
