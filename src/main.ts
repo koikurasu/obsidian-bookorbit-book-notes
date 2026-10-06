@@ -36,10 +36,13 @@ export default class BookOrbitPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
+		const saved = (await this.loadData()) as Partial<BookOrbitSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+		// Merge statusMap so new default keys appear even in existing saved data
+		this.settings.statusMap = Object.assign(
 			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<BookOrbitSettings> | null,
+			DEFAULT_SETTINGS.statusMap,
+			saved?.statusMap ?? {},
 		);
 	}
 
@@ -116,7 +119,7 @@ export default class BookOrbitPlugin extends Plugin {
 				return await client.searchBooks(query, limit);
 			},
 			async (id: number) => {
-				return await client.getBookDetail(id);
+				return await client.getBookDetail(id, this.settings.statusMap);
 			},
 			async (bookData) => {
 				const downloadCoverFn = async (bookId: number) => {

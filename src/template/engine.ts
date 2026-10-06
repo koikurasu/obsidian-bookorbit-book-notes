@@ -69,7 +69,12 @@ function replaceVariables(
 		}
 
 		// Handle dates
-		if (varName.endsWith('Date') || varName === 'startDate' || varName === 'endDate') {
+		if (
+			varName.endsWith('Date') ||
+			varName.endsWith('At') ||
+			varName === 'startDate' ||
+			varName === 'endDate'
+		) {
 			if (typeof value === 'string') {
 				return formatDate(value, dateFormat);
 			}

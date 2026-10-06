@@ -14,6 +14,7 @@ export interface BookOrbitSettings {
 	downloadCovers: boolean;
 	coverFolder: string;
 	maxSearchResults: number;
+	statusMap: Record<string, string>;
 }
 
 export const DEFAULT_SETTINGS: BookOrbitSettings = {
@@ -29,6 +30,13 @@ export const DEFAULT_SETTINGS: BookOrbitSettings = {
 	downloadCovers: true,
 	coverFolder: 'books/covers',
 	maxSearchResults: 10,
+	statusMap: {
+		abandoned: 'did not finish',
+		on_hold: 'paused',
+		read: 'done',
+		Reading: 'started',
+		want_to_read: 'not started',
+	},
 };
 
 export class BookOrbitSettingTab extends PluginSettingTab {
@@ -255,5 +263,38 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		// Status mapping section
+		new Setting(containerEl)
+			.setName('Status mapping')
+			.setHeading();
+
+		new Setting(containerEl)
+			.setDesc(
+				'Map BookOrbit status values to your preferred labels. ' +
+				'These appear in the {{status}} template variable.',
+			);
+
+		const STATUS_KEYS: { key: string; label: string }[] = [
+			{ key: 'abandoned', label: 'Abandoned' },
+			{ key: 'on_hold', label: 'On hold' },
+			{ key: 'read', label: 'Read' },
+			{ key: 'Reading', label: 'Reading' },
+			{ key: 'want_to_read', label: 'Want to read' },
+		];
+
+		for (const { key, label } of STATUS_KEYS) {
+			new Setting(containerEl)
+				.setName(label)
+				.setDesc(`API value: "${key}"`)
+				.addText((text) =>
+					text
+						.setValue(this.plugin.settings.statusMap[key] ?? key)
+						.onChange(async (value) => {
+							this.plugin.settings.statusMap[key] = value.trim() || key;
+							await this.plugin.saveSettings();
+						}),
+				);
+		}
 	}
 }

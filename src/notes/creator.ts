@@ -56,8 +56,14 @@ export async function createBookNote(
 
 			const coverFilename = sanitizeFilename(`${bookData.title || 'cover'}.jpg`);
 			const coverPath = normalizePath(`${normalizedCoverFolder}/${coverFilename}`);
-			await vault.createBinary(coverPath, coverData.data);
+			const existingCover = vault.getAbstractFileByPath(coverPath);
+			if (existingCover instanceof TFile) {
+				await vault.modifyBinary(existingCover, coverData.data);
+			} else {
+				await vault.createBinary(coverPath, coverData.data);
+			}
 			bookData.cover = coverPath;
+			bookData.image = coverPath;
 		}
 	}
 

@@ -154,7 +154,7 @@ export class BookOrbitClient {
 		}
 	}
 
-	async getBookDetail(id: number): Promise<BookData> {
+	async getBookDetail(id: number, statusMap?: Record<string, string>): Promise<BookData> {
 		try {
 			const token = await this.ensureAuth();
 
@@ -172,7 +172,7 @@ export class BookOrbitClient {
 				// Token expired, try refresh
 				this.accessToken = null;
 				await this.login();
-				return this.getBookDetail(id);
+				return this.getBookDetail(id, statusMap);
 			}
 
 			if (response.status === 404) {
@@ -186,7 +186,7 @@ export class BookOrbitClient {
 			}
 
 			const detail = response.json as BookDetail;
-			return this.mapToBookData(detail);
+			return this.mapToBookData(detail, statusMap);
 		} catch (error) {
 			if (
 				error instanceof BookOrbitResponseError ||
@@ -249,7 +249,7 @@ export class BookOrbitClient {
 		}
 	}
 
-	private mapToBookData(detail: BookDetail): BookData {
+	private mapToBookData(detail: BookDetail, statusMap?: Record<string, string>): BookData {
 		const authors = detail.authors.map((a) => a.name);
 		const genres = detail.genres;
 
@@ -261,55 +261,84 @@ export class BookOrbitClient {
 			detail.communityRatings.find((r) => r.provider === 'hardcover')
 				?.rating || null;
 
-		// Map read status to friendly string
-		const statusMap: Record<string, string> = {
-			reading: 'Reading',
-			completed: 'Completed',
-			'to-read': 'To Read',
-			dropped: 'Dropped',
-		};
+		// Map read status using caller-supplied map, with built-in fallback
+		const resolvedStatusMap: Record<string, string> = Object.assign(
+			{
+				reading: 'Reading',
+				completed: 'Completed',
+				'to-read': 'To Read',
+				dropped: 'Dropped',
+			},
+			statusMap ?? {},
+		);
 		const status = detail.readStatus?.status
-			? statusMap[detail.readStatus.status] || detail.readStatus.status
+			? resolvedStatusMap[detail.readStatus.status] || detail.readStatus.status
 			: '';
 
 		// Construct URLs
-		const biblioreadsUrl = detail.providerIds.goodreads
-			? `https://biblioreads.eu.org/book/show/${detail.providerIds.goodreads}`
+		const goodreadsId = detail.providerIds?.goodreads ?? null;
+		const hardcoverId = detail.providerIds?.hardcover ?? null;
+		const biblioreadsUrl = goodreadsId
+			? `https://biblioreads.eu.org/book/show/${goodreadsId}`
 			: null;
-		const hardcoverUrl = detail.providerIds.hardcover
-			? `https://hardcover.app/books/${detail.providerIds.hardcover}`
+		const hardcoverUrl = hardcoverId
+			? `https://hardcover.app/books/${hardcoverId}`
 			: null;
 		const bookorbitUrl = `${this.baseUrl}/book/${detail.id}`;
+
+		const isbn = detail.isbn13 || detail.isbn10 || null;
+		const startedAt = detail.readStatus?.startedAt ?? null;
+		const finishedAt = detail.readStatus?.finishedAt ?? null;
 
 		return {
 			title: detail.title,
 			subtitle: detail.subtitle,
 			author: authors.join(', '),
+			authors: authors.join(', '),
 			authorsArray: authors,
 			year: detail.publishedYear,
+			publishedYear: detail.publishedYear,
 			releaseDate: detail.publishedDate,
-			isbn: detail.isbn13,
+			publishedDate: detail.publishedDate,
+			isbn,
+			isbn13: detail.isbn13,
+			isbn10: detail.isbn10,
 			publisher: detail.publisher,
 			language: detail.language,
 			pages: detail.pageCount,
+			pageCount: detail.pageCount,
 			genres: genres.join(', '),
 			genresArray: genres,
 			plot: detail.description,
+			description: detail.description,
 			cover: null, // Will be set by caller if downloaded
+			image: null,
 			biblioreadsUrl,
 			hardcoverUrl,
 			bookorbitUrl,
 			bookorbitID: detail.id,
+			id: detail.id,
 			status,
 			rating: detail.rating,
-			startDate: detail.readStatus?.startedAt ?? null,
-			endDate: detail.readStatus?.finishedAt ?? null,
+			startDate: startedAt,
+			startedAt,
+			endDate: finishedAt,
+			finishedAt,
 			seriesName: detail.seriesName,
 			seriesIndex: detail.seriesIndex,
 			goodreadsRating,
 			hardcoverRating,
-			goodreadsID: detail.providerIds.goodreads,
-			hardcoverID: detail.providerIds.hardcover,
+			goodreadsID: goodreadsId,
+			goodreadsId,
+			hardcoverID: hardcoverId,
+			hardcoverId,
+			folderPath: detail.folderPath,
+			addedAt: detail.addedAt,
+			updatedAt: detail.updatedAt,
+			libraryId: detail.libraryId,
+			libraryName: detail.libraryName,
+			seriesId: detail.seriesId,
+			personalNote: detail.personalNote,
 		};
 	}
 }

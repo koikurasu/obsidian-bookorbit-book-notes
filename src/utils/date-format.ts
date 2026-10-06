@@ -10,13 +10,26 @@ export function formatDate(dateString: string | null, format: string): string {
 	}
 
 	// Use moment from global scope (available in Obsidian)
-	// @ts-ignore - moment is available globally in Obsidian
-	const moment = typeof window !== 'undefined' ? window.moment : null;
+	const win =
+		typeof window !== 'undefined'
+			? (window as unknown as {
+					moment?: (d: string) => {
+						isValid: () => boolean;
+						format: (f: string) => string;
+					};
+			  })
+			: null;
+	const moment = win?.moment;
 
 	if (!moment) {
 		// Fallback: return the date string as-is for test environment
 		return dateString;
 	}
 
-	return moment(dateString).format(format);
+	try {
+		const m = moment(dateString);
+		return m.isValid() ? m.format(format) : dateString;
+	} catch {
+		return dateString;
+	}
 }

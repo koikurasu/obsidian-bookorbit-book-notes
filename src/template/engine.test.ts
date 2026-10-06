@@ -166,4 +166,34 @@ rating: {{rating}}
 		expect(result).toContain('year: 2024');
 		expect(result).toContain('rating: 4');
 	});
+
+	it('should render raw BookOrbit API variable names properly', () => {
+		const template = `---
+year: {{publishedYear}}
+releaseDate: {{publishedDate}}
+isbn: {{isbn13}}
+pages: {{pageCount}}
+plot: {{description}}
+startDate: {{startedAt}}
+endDate: {{finishedAt}}
+---`;
+		const rawApiVariables: TemplateVariables = {
+			...mockVariables,
+			publishedYear: 2026,
+			publishedDate: '2026-07-02',
+			isbn13: '9781234567890',
+			pageCount: 336,
+			description: 'A great story: full of mystery and twists!',
+			startedAt: '2026-10-06T00:00:00.000Z',
+			finishedAt: null,
+		};
+		const result = renderTemplate(template, rawApiVariables, 'YYYY-MM-DD');
+		expect(result).toContain('year: 2026');
+		expect(result).toContain('releaseDate: 2026-07-02');
+		expect(result).toContain('isbn: 9781234567890');
+		expect(result).toContain('pages: 336');
+		expect(result).toContain('plot: "A great story: full of mystery and twists!"');
+		expect(result).toContain('startDate: 2026-10-06T00:00:00.000Z');
+		expect(result).toContain('endDate: ');
+	});
 });
