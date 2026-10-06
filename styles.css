@@ -1,0 +1,28 @@
+.bookorbit-suggestion {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px;
+}
+
+.bookorbit-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.bookorbit-title {
+	font-weight: bold;
+	margin-bottom: 2px;
+}
+
+.bookorbit-authors {
+	font-size: 0.9em;
+	color: var(--text-muted);
+	margin-bottom: 2px;
+}
+
+.bookorbit-series {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	font-style: italic;
+}
