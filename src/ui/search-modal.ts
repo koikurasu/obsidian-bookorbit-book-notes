@@ -74,7 +74,7 @@ export class BookSearchModal extends SuggestModal<BookSearchResult> {
 			thumbnail.src = cachedUrl;
 		} else if (this.thumbnailFn) {
 			thumbnail.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-			this.loadThumbnail(result.id, thumbnail);
+			void this.loadThumbnail(result.id, thumbnail);
 		}
 
 		const info = container.createDiv({ cls: 'bookorbit-info' });
