@@ -22,6 +22,7 @@ export interface TemplateVariables {
 	cover: string | null;
 	image?: string | null;
 	biblioreadsUrl: string | null;
+	goodreadsUrl: string | null;
 	hardcoverUrl: string | null;
 	bookorbitUrl: string;
 	bookorbitID: number;

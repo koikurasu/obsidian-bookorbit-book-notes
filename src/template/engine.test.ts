@@ -19,6 +19,7 @@ describe('Template Engine', () => {
 		plot: 'A great story',
 		cover: 'covers/test-book.jpg',
 		biblioreadsUrl: 'https://biblioreads.eu.org/book/show/12345',
+		goodreadsUrl: 'https://www.goodreads.com/book/show/12345',
 		hardcoverUrl: 'https://hardcover.app/books/test-book',
 		bookorbitUrl: 'http://localhost:6262/book/8',
 		bookorbitID: 8,
@@ -165,6 +166,19 @@ rating: {{rating}}
 		const result = renderTemplate(template, mockVariables, 'YYYY-MM-DD');
 		expect(result).toContain('year: 2024');
 		expect(result).toContain('rating: 4');
+	});
+
+	it('should not quote numeric IDs in frontmatter', () => {
+		const template = `---
+goodreadsID: {{goodreadsID}}
+biblioreadsUrl: https://biblioreads.eu.org/book/show/{{goodreadsID}}
+goodreadsUrl: https://www.goodreads.com/book/show/{{goodreadsID}}
+---`;
+		const result = renderTemplate(template, mockVariables, 'YYYY-MM-DD');
+		expect(result).toContain('goodreadsID: 12345');
+		expect(result).toContain('biblioreadsUrl: https://biblioreads.eu.org/book/show/12345');
+		expect(result).toContain('goodreadsUrl: https://www.goodreads.com/book/show/12345');
+		expect(result).not.toContain('"12345"');
 	});
 
 	it('should render raw BookOrbit API variable names properly', () => {

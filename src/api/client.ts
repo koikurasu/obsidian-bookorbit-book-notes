@@ -283,6 +283,9 @@ export class BookOrbitClient {
 		// Construct URLs
 		const goodreadsId = detail.providerIds?.goodreads ?? null;
 		const hardcoverId = detail.providerIds?.hardcover ?? null;
+		const goodreadsUrl = goodreadsId
+			? `https://www.goodreads.com/book/show/${goodreadsId}`
+			: null;
 		const biblioreadsUrl = goodreadsId
 			? `https://biblioreads.eu.org/book/show/${goodreadsId}`
 			: null;
@@ -318,9 +321,10 @@ export class BookOrbitClient {
 			description: detail.description,
 			cover: null, // Will be set by caller if downloaded
 			image: null,
-			biblioreadsUrl,
-			hardcoverUrl,
-			bookorbitUrl,
+		biblioreadsUrl,
+		goodreadsUrl,
+		hardcoverUrl,
+		bookorbitUrl,
 			bookorbitID: detail.id,
 			id: detail.id,
 			status,

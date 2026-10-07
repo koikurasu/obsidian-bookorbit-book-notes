@@ -7,39 +7,88 @@ export function escapeYamlString(value: string): string {
 		return '';
 	}
 
-	// If the string contains newlines, use a YAML block scalar
 	if (value.includes('\n')) {
-		// Use folded block scalar (>) for multi-line strings
 		return `>\n  ${value.split('\n').join('\n  ')}`;
 	}
 
-	// Check if the string needs quoting
-	const needsQuoting =
-		value.includes(':') ||
-		value.includes('#') ||
-		value.includes('[') ||
-		value.includes(']') ||
-		value.includes('{') ||
-		value.includes('}') ||
-		value.includes('|') ||
-		value.includes('>') ||
-		value.includes('*') ||
-		value.includes('&') ||
-		value.includes('!') ||
-		value.includes('%') ||
-		value.includes('@') ||
-		value.includes('`') ||
-		value.includes('"') ||
-		value.startsWith(' ') ||
-		value.endsWith(' ') ||
-		value.startsWith("'");
-
-	if (needsQuoting) {
-		// Use double quotes and escape special characters
-		return `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+	if (needsQuoting(value)) {
+		return doubleQuote(value);
 	}
 
 	return value;
+}
+
+/**
+ * Escapes a value for use as an item inside a YAML flow sequence (`[...]`).
+ * Always double-quotes: inside a flow sequence, commas, brackets, hashes and
+ * colons are structural and would otherwise split or break the sequence.
+ */
+export function escapeYamlFlowItem(value: unknown): string {
+	return doubleQuote(String(value));
+}
+
+const YAML_INDICATORS = /[#{}[\]|>&*!%@`"]/;
+const YAML_KEYWORD = /^(true|false|null|yes|no|on|off|~)$/i;
+
+/**
+ * True if the string contains any control character (C0 block or DEL),
+ * including newline, carriage return and tab. These cannot appear literally
+ * in a YAML plain scalar and must be double-quoted with escapes.
+ */
+function hasControlChars(value: string): boolean {
+	for (let i = 0; i < value.length; i++) {
+		const code = value.charCodeAt(i);
+		if (code < 32 || code === 127) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function needsQuoting(value: string): boolean {
+	if (hasControlChars(value)) {
+		return true;
+	}
+	if (YAML_INDICATORS.test(value)) {
+		return true;
+	}
+	if (value.includes(': ') || value.endsWith(':')) {
+		return true;
+	}
+	if (YAML_KEYWORD.test(value)) {
+		return true;
+	}
+	if (value.startsWith('- ') || value === '-' || value.startsWith('? ')) {
+		return true;
+	}
+	if (value.startsWith(' ') || value.endsWith(' ')) {
+		return true;
+	}
+	if (value.startsWith("'")) {
+		return true;
+	}
+	return false;
+}
+
+function doubleQuote(value: string): string {
+	let escaped = value
+		.replace(/\\/g, '\\\\')
+		.replace(/"/g, '\\"')
+		.replace(/\n/g, '\\n')
+		.replace(/\r/g, '\\r')
+		.replace(/\t/g, '\\t');
+
+	let out = '';
+	for (const char of escaped) {
+		const code = char.codePointAt(0) ?? 0;
+		if ((code >= 0 && code < 9) || (code > 9 && code < 32) || code === 127) {
+			out += '\\u' + code.toString(16).padStart(4, '0');
+		} else {
+			out += char;
+		}
+	}
+
+	return '"' + out + '"';
 }
 
 /**

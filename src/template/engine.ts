@@ -1,5 +1,5 @@
 import type { TemplateVariables } from './types';
-import { escapeYamlString, isInFrontmatter } from './yaml-escape';
+import { escapeYamlString, escapeYamlFlowItem, isInFrontmatter } from './yaml-escape';
 import { formatDate } from '../utils/date-format';
 
 /**
@@ -63,7 +63,7 @@ function replaceVariables(
 		// Handle missing/empty values
 		if (value === null || value === undefined || value === '') {
 			if (defaultValue !== undefined) {
-				return defaultValue;
+				return inFrontmatter ? escapeYamlString(defaultValue) : defaultValue;
 			}
 			return '';
 		}
@@ -76,18 +76,30 @@ function replaceVariables(
 			varName === 'endDate'
 		) {
 			if (typeof value === 'string') {
-				return formatDate(value, dateFormat);
+				const formatted = formatDate(value, dateFormat);
+				// Dates must still be escaped in frontmatter: ISO timestamps
+				// contain colons which YAML could misparse as mappings.
+				return inFrontmatter ? escapeYamlString(formatted) : formatted;
 			}
 		}
 
 		// Handle arrays
 		if (Array.isArray(value)) {
 			if (varName.endsWith('Array')) {
-				// YAML inline list format
+				if (value.length === 0) {
+					return '[]';
+				}
+				// YAML inline list format. Inside frontmatter every item must be
+				// quoted: commas, brackets, hashes and colons are structural in a
+				// flow sequence and would otherwise split or break the list.
+				if (inFrontmatter) {
+					return `[${value.map((v) => escapeYamlFlowItem(v)).join(', ')}]`;
+				}
 				return `[${value.map((v) => String(v)).join(', ')}]`;
 			}
 			// Comma-separated string
-			return value.map((v) => String(v)).join(', ');
+			const joined = value.map((v) => String(v)).join(', ');
+			return inFrontmatter ? escapeYamlString(joined) : joined;
 		}
 
 		// Handle numbers
@@ -127,6 +139,7 @@ pages: {{pages}}
 genres: {{genresArray}}
 plot: {{plot}}
 image: {{cover}}
+goodreadsUrl: {{goodreadsUrl}}
 biblioreadsUrl: {{biblioreadsUrl}}
 hardcoverUrl: {{hardcoverUrl}}
 bookorbitUrl: {{bookorbitUrl}}

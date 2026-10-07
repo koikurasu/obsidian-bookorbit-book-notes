@@ -34,8 +34,13 @@ The following variables are available in your note template:
 - `{{genresArray}}` - Genres (YAML list)
 - `{{plot}}` - Description/plot
 - `{{cover}}` - Cover image path
-- `{{biblioreadsUrl}}` - Biblioreads URL
+- `{{goodreadsUrl}}` - Goodreads URL
+- `{{biblioreadsUrl}}` - Biblioreads URL (an alternative frontend to Goodreads)
 - `{{hardcoverUrl}}` - Hardcover URL
+- `{{goodreadsRating}}` - Goodreads rating
+- `{{hardcoverRating}}` - Hardcover rating
+- `{{goodreadsID}}` - Goodreads ID
+- `{{hardcoverID}}` - Hardcover ID
 - `{{bookorbitUrl}}` - BookOrbit URL
 - `{{bookorbitID}}` - BookOrbit book ID
 - `{{status}}` - Reading status
@@ -44,10 +49,6 @@ The following variables are available in your note template:
 - `{{endDate}}` - End date (formatted)
 - `{{seriesName}}` - Series name
 - `{{seriesIndex}}` - Series index
-- `{{goodreadsRating}}` - Goodreads rating
-- `{{hardcoverRating}}` - Hardcover rating
-- `{{goodreadsID}}` - Goodreads ID
-- `{{hardcoverID}}` - Hardcover ID
 
 ### Template Syntax
 
