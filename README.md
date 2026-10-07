@@ -21,7 +21,7 @@ Search your BookOrbit instance and create book notes from a configurable templat
 ### Output
 
 1. Set the **Destination folder** where notes will be created
-2. Set the **Filename template** (default: `{title} ({year})`). Use `{{variable}}` to insert a value (see [Template Syntax](#template-syntax))
+2. Set the **Filename template** (default: `{{title}}`). Use `{{variable}}` to insert a value (see [Template Variables](#template-variables)))
 3. Toggle whether or not to **Open notes after creation**
 
 ### Template
