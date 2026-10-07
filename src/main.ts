@@ -140,6 +140,10 @@ export default class BookOrbitPlugin extends Plugin {
 			bookorbitUrl: this.settings.serverUrl,
 		};
 
+		const downloadCoverFn = async (bookId: number) => {
+			return await client.downloadCover(bookId);
+		};
+
 		// Open modal
 		new BookSearchModal(
 			this.app,
@@ -150,13 +154,10 @@ export default class BookOrbitPlugin extends Plugin {
 				return await client.getBookDetail(id, this.settings.statusMap);
 			},
 			async (bookData) => {
-				const downloadCoverFn = async (bookId: number) => {
-					return await client.downloadCover(bookId);
-				};
-
 				return await createBookNote(this.app, bookData, noteOptions, downloadCoverFn);
 			},
 			this.settings.maxSearchResults,
+			downloadCoverFn,
 		).open();
 	}
 

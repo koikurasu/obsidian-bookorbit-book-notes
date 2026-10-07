@@ -1,3 +1,12 @@
+.bookorbit-thumbnail {
+	width: 40px;
+	height: 60px;
+	object-fit: cover;
+	border-radius: 4px;
+	flex-shrink: 0;
+	background-color: var(--background-modifier-border);
+}
+
 .bookorbit-suggestion {
 	display: flex;
 	align-items: center;
