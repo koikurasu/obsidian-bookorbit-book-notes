@@ -4,6 +4,6 @@
 	"version": "0.1.0",
 	"minAppVersion": "1.11.4",
 	"description": "Search your BookOrbit instance and create book notes from a configurable template.",
-	"author": "balfiere",
+	"author": "koikurasu",
 	"isDesktopOnly": false
 }

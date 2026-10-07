@@ -1,5 +1,6 @@
 import { PluginSettingTab, Setting, SecretComponent, Notice } from 'obsidian';
 import type BookOrbitPlugin from './main';
+import { FileSuggest, FolderSuggest } from './ui';
 
 export interface UpdateMapping {
 	templateVar: string;
@@ -178,15 +179,16 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Destination folder')
 			.setDesc('Folder in your vault where book notes will be saved.')
-			.addText((text) =>
-				text
+			.addSearch((search) => {
+				new FolderSuggest(this.app, search.inputEl);
+				search
 					.setPlaceholder('Books')
 					.setValue(this.plugin.settings.outputFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.outputFolder = value.trim().replace(/\.\./g, '').replace(/^\/+|\/+$/g, '') || 'books';
 						await this.plugin.saveSettings();
-					}),
-			);
+					});
+			});
 
 		new Setting(containerEl)
 			.setName('Filename template')
@@ -220,15 +222,16 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Template file path')
 			.setDesc('Path to a note in your vault to use as template.')
-			.addText((text) =>
-				text
+			.addSearch((search) => {
+				new FileSuggest(this.app, search.inputEl);
+				search
 					.setPlaceholder('templates/book note template.md')
 					.setValue(this.plugin.settings.templatePath)
 					.onChange(async (value) => {
 						this.plugin.settings.templatePath = value.trim();
 						await this.plugin.saveSettings();
-					}),
-			);
+					});
+			});
 
 		new Setting(containerEl)
 			.setName('Date format')
@@ -276,15 +279,16 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName('Cover folder')
 				.setDesc('Folder where cover images will be saved.')
-				.addText((text) =>
-					text
+				.addSearch((search) => {
+					new FolderSuggest(this.app, search.inputEl);
+					search
 						.setPlaceholder('Books/covers')
 						.setValue(this.plugin.settings.coverFolder)
 						.onChange(async (value) => {
 							this.plugin.settings.coverFolder = value.trim().replace(/\.\./g, '').replace(/^\/+|\/+$/g, '') || 'books/covers';
 							await this.plugin.saveSettings();
-						}),
-				);
+						});
+				});
 		}
 
 		// Search section
