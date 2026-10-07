@@ -13,6 +13,7 @@ export default defineConfig(
 		'package.json',
 		'package-lock.json',
 		'tsconfig.json',
+		'scripts',
 	]),
 	{
 		languageOptions: {
@@ -21,7 +22,11 @@ export default defineConfig(
 			},
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['eslint.config.mts', 'manifest.json', 'vitest.config.mts'],
+					allowDefaultProject: [
+						'eslint.config.mts',
+						'manifest.json',
+						'vitest.config.mts',
+					],
 				},
 				tsconfigRootDir: import.meta.dirname,
 				extraFileExtensions: ['.json'],

@@ -1,6 +1,8 @@
 import { App, TFile, normalizePath, Notice } from 'obsidian';
 import type { BookData } from '../api/types';
 import type { UpdateMapping } from '../settings';
+import { formatLanguage } from '../language';
+import type { LanguageFormat } from '../language';
 import { renderTemplate } from '../template/engine';
 import { sanitizeFilename } from '../utils/filename';
 import { formatDate } from '../utils/date-format';
@@ -9,6 +11,7 @@ export interface UpdateNoteOptions {
 	mappings: UpdateMapping[];
 	bookorbitIdKey: string;
 	dateFormat: string;
+	languageFormat: LanguageFormat;
 	filenameTemplate: string;
 	outputFolder: string;
 }
@@ -16,15 +19,23 @@ export interface UpdateNoteOptions {
 /**
  * Returns the value appropriate for writing into frontmatter for the given
  * template variable. Arrays stay as arrays (Obsidian writes them as YAML
- * lists), date fields are formatted with moment, everything else is the raw
- * value or null.
+ * lists), date fields are formatted with moment, and the `language` variable
+ * is transformed by the configured format. Everything else is the raw value
+ * or null.
  */
 function getFrontmatterValue(
 	templateVar: string,
 	bookData: BookData,
 	dateFormat: string,
+	languageFormat: LanguageFormat,
 ): unknown {
-	const value = bookData[templateVar];
+	let value: unknown = bookData[templateVar];
+
+	if (templateVar === 'language' && languageFormat !== 'as-is') {
+		const raw = value;
+		const rawStr = typeof raw === 'string' ? raw : '';
+		value = formatLanguage(rawStr, languageFormat);
+	}
 
 	if (value === undefined || value === null || value === '') {
 		return null;
@@ -70,7 +81,7 @@ export async function updateBookNote(
 	bookData: BookData,
 	options: UpdateNoteOptions,
 ): Promise<void> {
-	const { mappings, dateFormat, filenameTemplate, outputFolder } = options;
+	const { mappings, dateFormat, filenameTemplate, outputFolder, languageFormat } = options;
 
 	const enabledMappings = mappings.filter(
 		(m) => m.enabled && m.frontmatterKey.trim() !== '',
@@ -81,26 +92,27 @@ export async function updateBookNote(
 		return;
 	}
 
-	// 1. Batch-update frontmatter in a single write
-	await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-		for (const mapping of enabledMappings) {
-			fm[mapping.frontmatterKey] = getFrontmatterValue(
-				mapping.templateVar,
-				bookData,
-				dateFormat,
-			);
-		}
-	});
+// 1. Batch-update frontmatter in a single write
+		await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+			for (const mapping of enabledMappings) {
+				fm[mapping.frontmatterKey] = getFrontmatterValue(
+					mapping.templateVar,
+					bookData,
+					dateFormat,
+					languageFormat,
+				);
+			}
+		});
 
 	// 2. Rename the file if the filename template uses any updated variable
-	const filenameVars = new Set(extractTemplateVars(filenameTemplate));
-	const enabledVars = new Set(enabledMappings.map((m) => m.templateVar));
-	const shouldRename = [...filenameVars].some((v) => enabledVars.has(v));
+		const filenameVars = new Set(extractTemplateVars(filenameTemplate));
+		const enabledVars = new Set(enabledMappings.map((m) => m.templateVar));
+		const shouldRename = [...filenameVars].some((v) => enabledVars.has(v));
 
-	if (shouldRename) {
-		const newBasename = sanitizeFilename(
-			renderTemplate(filenameTemplate, bookData, dateFormat),
-		);
+		if (shouldRename) {
+			const newBasename = sanitizeFilename(
+				renderTemplate(filenameTemplate, bookData, dateFormat, languageFormat),
+			);
 		const normalizedFolder = normalizePath(outputFolder);
 		const newPath = normalizePath(`${normalizedFolder}/${newBasename}.md`);
 

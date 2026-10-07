@@ -1,5 +1,6 @@
 import { normalizePath, TFile, Notice, App } from 'obsidian';
 import type { BookData } from '../api/types';
+import type { LanguageFormat } from '../language';
 import { renderTemplate } from '../template/engine';
 import { sanitizeFilename, resolveFilename } from '../utils/filename';
 import { findExistingNoteByBookOrbitId } from './duplicate-checker';
@@ -9,6 +10,7 @@ export interface NoteCreationOptions {
 	filenameTemplate: string;
 	template: string;
 	dateFormat: string;
+	languageFormat: LanguageFormat;
 	downloadCovers: boolean;
 	coverFolder: string;
 	openNoteAfterCreation: boolean;
@@ -68,11 +70,21 @@ export async function createBookNote(
 	}
 
 	// Render template
-	const renderedContent = renderTemplate(options.template, bookData, options.dateFormat);
+	const renderedContent = renderTemplate(
+		options.template,
+		bookData,
+		options.dateFormat,
+		options.languageFormat,
+	);
 
 	// Generate filename
 	const baseFilename = sanitizeFilename(
-		renderTemplate(options.filenameTemplate, bookData, options.dateFormat),
+		renderTemplate(
+			options.filenameTemplate,
+			bookData,
+			options.dateFormat,
+			options.languageFormat,
+		),
 	);
 
 	// Resolve filename with collision handling

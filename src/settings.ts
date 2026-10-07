@@ -1,6 +1,7 @@
 import { PluginSettingTab, Setting, SecretComponent, Notice } from 'obsidian';
 import type BookOrbitPlugin from './main';
 import { FileSuggest, FolderSuggest } from './ui';
+import { LANGUAGE_FORMATS, type LanguageFormat } from './language';
 
 export interface UpdateMapping {
 	templateVar: string;
@@ -48,6 +49,7 @@ export interface BookOrbitSettings {
 	openNoteAfterCreation: boolean;
 	templatePath: string;
 	dateFormat: string;
+	languageFormat: LanguageFormat;
 	downloadCovers: boolean;
 	coverFolder: string;
 	maxSearchResults: number;
@@ -66,6 +68,7 @@ export const DEFAULT_SETTINGS: BookOrbitSettings = {
 	openNoteAfterCreation: true,
 	templatePath: 'templates/book note template.md',
 	dateFormat: 'YYYY-MM-DD',
+	languageFormat: 'as-is',
 	downloadCovers: true,
 	coverFolder: 'books/covers',
 	maxSearchResults: 10,
@@ -243,6 +246,27 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.dateFormat)
 					.onChange(async (value) => {
 						this.plugin.settings.dateFormat = value.trim() || 'YYYY-MM-DD';
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName('Language format')
+			.setDesc('How the {{language}} template variable is rendered.')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions(
+						LANGUAGE_FORMATS.reduce(
+							(acc, f) => {
+								acc[f.value] = f.label;
+								return acc;
+							},
+							{} as Record<string, string>,
+						),
+					)
+					.setValue(this.plugin.settings.languageFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.languageFormat = value as LanguageFormat;
 						await this.plugin.saveSettings();
 					}),
 			);

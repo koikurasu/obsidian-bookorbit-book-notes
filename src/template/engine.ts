@@ -1,14 +1,20 @@
 import type { TemplateVariables } from './types';
 import { escapeYamlString, escapeYamlFlowItem, isInFrontmatter } from './yaml-escape';
 import { formatDate } from '../utils/date-format';
+import { formatLanguage, type LanguageFormat } from '../language';
 
 /**
  * Parses a template and returns the rendered content with variables substituted.
+ *
+ * The `languageFormat` setting controls how the raw `{{language}}` value from
+ * BookOrbit is transformed before substitution. Defaults to 'as-is' so existing
+ * notes are unaffected.
  */
 export function renderTemplate(
 	template: string,
 	variables: TemplateVariables,
 	dateFormat: string,
+	languageFormat: LanguageFormat = 'as-is',
 ): string {
 	const lines = template.split('\n');
 	let frontmatterStarted = false;
@@ -29,7 +35,7 @@ export function renderTemplate(
 		}
 
 		// Replace variables
-		const rendered = replaceVariables(line, variables, dateFormat, inFrontmatter);
+		const rendered = replaceVariables(line, variables, dateFormat, languageFormat, inFrontmatter);
 
 		return rendered;
 	});
@@ -54,11 +60,25 @@ function replaceVariables(
 	line: string,
 	variables: TemplateVariables,
 	dateFormat: string,
+	languageFormat: LanguageFormat,
 	inFrontmatter: boolean,
 ): string {
 	// Match {{variable}} or {{variable|default}}
 	return line.replace(/{{(\w+)(?:\|([^}]+))?}}/g, (_match: string, varName: string, defaultValue?: string) => {
-		const value: unknown = variables[varName];
+		let value: unknown = variables[varName];
+
+		// The {{language}} variable is transformed by the configured format before
+		// any other handling. A null/empty raw value stays empty.
+		if (varName === 'language' && languageFormat !== 'as-is') {
+			const raw = variables[varName];
+			const rawStr =
+				typeof raw === 'string'
+					? raw
+					: raw === null || raw === undefined
+						? ''
+						: String(raw);
+			value = formatLanguage(rawStr, languageFormat);
+		}
 
 		// Handle missing/empty values
 		if (value === null || value === undefined || value === '') {

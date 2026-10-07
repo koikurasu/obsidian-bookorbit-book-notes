@@ -4,6 +4,7 @@ import { DEFAULT_TEMPLATE } from './template';
 import { createBookNote, type NoteCreationOptions, updateBookNote } from './notes';
 import { BookSearchModal } from './ui';
 import { DEFAULT_SETTINGS, BookOrbitSettingTab, type BookOrbitSettings } from './settings';
+import { LANGUAGE_FORMATS } from './language';
 
 export default class BookOrbitPlugin extends Plugin {
 	settings!: BookOrbitSettings;
@@ -72,6 +73,13 @@ export default class BookOrbitPlugin extends Plugin {
 		this.settings.updateMappings = DEFAULT_SETTINGS.updateMappings.map(
 			(def) => savedMappings.get(def.templateVar) ?? def,
 		);
+		// Validate languageFormat against known formats; fall back to default
+		// for values saved by older plugin versions or tampered data.
+		if (
+			!LANGUAGE_FORMATS.some((f) => f.value === this.settings.languageFormat)
+		) {
+			this.settings.languageFormat = DEFAULT_SETTINGS.languageFormat;
+		}
 	}
 
 	async saveSettings() {
@@ -134,6 +142,7 @@ export default class BookOrbitPlugin extends Plugin {
 			filenameTemplate: this.settings.filenameTemplate,
 			template,
 			dateFormat: this.settings.dateFormat,
+			languageFormat: this.settings.languageFormat,
 			downloadCovers: this.settings.downloadCovers,
 			coverFolder: this.settings.coverFolder,
 			openNoteAfterCreation: this.settings.openNoteAfterCreation,
@@ -224,6 +233,7 @@ export default class BookOrbitPlugin extends Plugin {
 				mappings: this.settings.updateMappings,
 				bookorbitIdKey: this.settings.bookorbitIdKey,
 				dateFormat: this.settings.dateFormat,
+				languageFormat: this.settings.languageFormat,
 				filenameTemplate: this.settings.filenameTemplate,
 				outputFolder: this.settings.outputFolder,
 			});
