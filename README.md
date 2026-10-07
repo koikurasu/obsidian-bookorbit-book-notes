@@ -1,11 +1,11 @@
-# BookOrbit Plugin for Obsidian
+# BookOrbit Book Notes Plugin for Obsidian
 
 Search your BookOrbit instance and create book notes from a configurable template.
 
 ## Installation
 
-1. Download the latest release from [GitHub Releases](https://github.com/yourusername/obsidian-bookorbit/releases)
-2. Extract the files to your vault's `.obsidian/plugins/obsidian-bookorbit/` folder
+1. Download the latest release from [GitHub Releases](https://github.com/koikurasu/obsidian-bookorbit-book-notes/releases)
+2. Extract the files to your vault's `.obsidian/plugins/obsidian-bookorbit-book-notes/` folder
 3. Enable the plugin in **Settings → Community plugins**
 
 ## Configuration
@@ -27,6 +27,7 @@ The following variables are available in your note template:
 - `{{year}}` - Publication year
 - `{{releaseDate}}` - Publication date (formatted)
 - `{{isbn}}` - ISBN-13
+- `{{isbn10}}` - ISBN-10
 - `{{publisher}}` - Publisher
 - `{{language}}` - Language
 - `{{pages}}` - Page count
@@ -72,10 +73,7 @@ The following variables are available in your note template:
 2. Press `Ctrl/Cmd + P` and run "Update current book note"
 3. The plugin fetches fresh data from BookOrbit and rewrites the enabled frontmatter properties
 
-Configure which properties update in **Settings → BookOrbit → Note updates**: each row maps a
-template variable (e.g. `{{title}}`) to a frontmatter key (e.g. `title`) with an on/off checkbox.
-If your filename template (e.g. `{{title}} ({{year}})`) uses an updated variable and the rendered
-name changed, the file is renamed automatically.
+Configure which properties update in **Settings → BookOrbit → Note updates**: each row maps a template variable (e.g. `{{title}}`) to a frontmatter key (e.g. `title`) with an on/off checkbox. If your filename template (e.g. `{{title}} ({{year}})`) uses an updated variable and the rendered name changed, the file is renamed automatically.
 
 ## Development
 
