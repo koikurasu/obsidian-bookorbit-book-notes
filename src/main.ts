@@ -13,7 +13,7 @@ export default class BookOrbitPlugin extends Plugin {
 		await this.loadSettings();
 
 		// Add ribbon icon
-		this.addRibbonIcon('book-open', 'Search books', () => {
+		this.addRibbonIcon('book-text', 'Search books', () => {
 			void this.openSearchModal();
 		});
 
