@@ -211,11 +211,21 @@ export interface BookData {
 	[key: string]: unknown;
 }
 
-// Auth response types
+// Auth response types. BookOrbit returns the full credential set in the JSON
+// body for native clients (clientKind: 'native'); web clients receive the
+// refresh token only via a Set-Cookie header.
 export interface LoginResponse {
 	accessToken: string;
+	accessTokenExpiresAt?: string;
+	refreshToken?: string;
+	refreshTokenExpiresAt?: string;
+	sessionId?: number;
 }
 
 export interface RefreshResponse {
 	accessToken: string;
+	accessTokenExpiresAt?: string;
+	refreshToken?: string;
+	refreshTokenExpiresAt?: string;
+	sessionId?: number;
 }

@@ -96,22 +96,20 @@ export default class BookOrbitPlugin extends Plugin {
 		return this.settings.password || '';
 	}
 
-	async testConnection(): Promise<boolean> {
+	async testConnection(): Promise<void> {
 		const password = await this.getPassword();
 		if (!this.settings.serverUrl || !this.settings.username || !password) {
-			return false;
+			throw new Error(
+				'Server URL, username, and password are all required.',
+			);
 		}
 
-		try {
-			this.client = new BookOrbitClient(
-				this.settings.serverUrl,
-				this.settings.username,
-				password,
-			);
-			return await this.client.testConnection();
-		} catch {
-			return false;
-		}
+		this.client = new BookOrbitClient(
+			this.settings.serverUrl,
+			this.settings.username,
+			password,
+		);
+		await this.client.testConnection();
 	}
 
 	private async openSearchModal(): Promise<void> {

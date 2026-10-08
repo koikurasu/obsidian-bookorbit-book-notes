@@ -158,21 +158,22 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.addButton((button) => {
 				button.setButtonText('Test connection');
-				button.onClick(async () => {
-					button.setDisabled(true);
-					button.setButtonText('Testing...');
+			button.onClick(async () => {
+				button.setDisabled(true);
+				button.setButtonText('Testing...');
 
-					const success = await this.plugin.testConnection();
-
-					if (success) {
-						new Notice('Connection successful!');
-					} else {
-						new Notice('Connection failed. Check your credentials.');
-					}
-
+				try {
+					await this.plugin.testConnection();
+					new Notice('Connection successful!');
+				} catch (err) {
+					new Notice(
+						`Connection failed: ${err instanceof Error ? err.message : String(err)}`,
+					);
+				} finally {
 					button.setDisabled(false);
 					button.setButtonText('Test connection');
-				});
+				}
+			});
 			});
 
 		// Output section
