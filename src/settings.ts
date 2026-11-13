@@ -41,9 +41,8 @@ export const DEFAULT_UPDATE_MAPPINGS: UpdateMapping[] = [
 
 export interface BookOrbitSettings {
 	serverUrl: string;
-	username: string;
-	passwordSecret: string;
-	password?: string;
+	apiKeySecret: string;
+	apiKey?: string;
 	outputFolder: string;
 	filenameTemplate: string;
 	openNoteAfterCreation: boolean;
@@ -61,9 +60,8 @@ export interface BookOrbitSettings {
 
 export const DEFAULT_SETTINGS: BookOrbitSettings = {
 	serverUrl: '',
-	username: '',
-	passwordSecret: '',
-	password: '',
+	apiKeySecret: '',
+	apiKey: '',
 	outputFolder: 'books',
 	filenameTemplate: '{{title}}',
 	openNoteAfterCreation: true,
@@ -118,39 +116,27 @@ export class BookOrbitSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(containerEl)
-			.setName('Username')
-			.addText((text) =>
-				text
-					.setPlaceholder('Your username')
-					.setValue(this.plugin.settings.username)
-					.onChange(async (value) => {
-						this.plugin.settings.username = value.trim();
-						await this.plugin.saveSettings();
-					}),
-			);
-
 		if (this.app.secretStorage) {
 			new Setting(containerEl)
-				.setName('Password secret')
-				.setDesc('Select or create a secret for your BookOrbit password.')
+				.setName('API key')
+				.setDesc('Select or create a secret for your BookOrbit API key.')
 				.addComponent((el) =>
 					new SecretComponent(this.app, el)
-						.setValue(this.plugin.settings.passwordSecret)
+						.setValue(this.plugin.settings.apiKeySecret)
 						.onChange(async (value) => {
-							this.plugin.settings.passwordSecret = value;
+							this.plugin.settings.apiKeySecret = value;
 							await this.plugin.saveSettings();
 						}),
 				);
 		} else {
 			new Setting(containerEl)
-				.setName('Password')
+				.setName('API key')
 				.addText((text) => {
 					text
-						.setPlaceholder('Your password')
-						.setValue(this.plugin.settings.password || '')
+						.setPlaceholder('Your BookOrbit API key')
+						.setValue(this.plugin.settings.apiKey || '')
 						.onChange(async (value) => {
-							this.plugin.settings.password = value;
+							this.plugin.settings.apiKey = value;
 							await this.plugin.saveSettings();
 						});
 					text.inputEl.type = 'password';

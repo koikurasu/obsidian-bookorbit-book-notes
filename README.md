@@ -1,8 +1,21 @@
 # BookOrbit Book Notes Plugin for Obsidian
 
-Search your BookOrbit instance and create book notes from a configurable template.
+Search your BookOrbit instance and create book notes from a configurable template. Requires BookOrbit version 3.8.0 or higher.
 
 ## Installation
+
+### With BRAT
+
+[BRAT](https://github.com/tfthacker/obsidian42-brat) (Beta Reviewer's Auto-update Tester) lets you install the plugin directly from this GitHub repository.
+
+1. Install the BRAT plugin from **Settings → Community plugins** and enable it
+2. Open **Settings → BRAT**
+3. Select **Add Beta plugin**
+4. Enter the repository URL: `https://github.com/koikurasu/obsidian-bookorbit-book-notes`
+5. Choose the branch, tag, or commit to install from (for example `main` or a release tag), then select **Add Plugin**
+6. Enable the plugin in **Settings → Community plugins**
+
+### From GitHub Releases
 
 1. Download the latest release from [GitHub Releases](https://github.com/koikurasu/obsidian-bookorbit-book-notes/releases)
 2. Extract the files to your vault's `.obsidian/plugins/obsidian-bookorbit-book-notes/` folder
@@ -14,14 +27,14 @@ Search your BookOrbit instance and create book notes from a configurable templat
 
 1. Open **Settings → BookOrbit**
 2. Enter your BookOrbit server URL
-3. Enter your username and password (stored securely)
+3. Enter your BookOrbit API key (**Settings → API Key**). Give it read and write permissions for editing metadata (**Access → Read and write** then **Extra permissions → Library & Books → Edit metadata**).
 4. Click "Test connection" to verify
 5. Configure output folder, template, and other settings
 
 ### Output
 
 1. Set the **Destination folder** where notes will be created
-2. Set the **Filename template** (default: `{{title}}`). Use `{{variable}}` to insert a value (see [Template Variables](#template-variables)))
+2. Set the **Filename template** (default: `{{title}}`). Use `{{variable}}` to insert a value (see [Template Variables](#template-variables))
 3. Toggle whether or not to **Open notes after creation**
 
 ### Template
@@ -40,7 +53,7 @@ The following variables are available in your note template:
 - `{{authorsArray}}` - Authors (YAML list)
 - `{{year}}` - Publication year
 - `{{releaseDate}}` - Publication date (formatted)
-- `{{isbn}}` - ISBN-13
+- `{{isbn13}}` - ISBN-13
 - `{{isbn10}}` - ISBN-10
 - `{{publisher}}` - Publisher
 - `{{language}}` - Language. Rendered according to the **Language format** setting (default: as is). Options: as is, full name (title case), full name (lower case), ISO 639-1, ISO 639-2.

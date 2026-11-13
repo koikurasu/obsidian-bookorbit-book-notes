@@ -80,52 +80,47 @@ export default class BookOrbitPlugin extends Plugin {
 		) {
 			this.settings.languageFormat = DEFAULT_SETTINGS.languageFormat;
 		}
+		// Drop credentials saved by the username/password auth flow
+		const legacy = this.settings as unknown as Record<string, unknown>;
+		delete legacy.username;
+		delete legacy.passwordSecret;
+		delete legacy.password;
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
 
-	async getPassword(): Promise<string> {
-		if (this.settings.passwordSecret && this.app.secretStorage) {
-			const secret = this.app.secretStorage.getSecret(this.settings.passwordSecret);
+	async getApiKey(): Promise<string> {
+		if (this.settings.apiKeySecret && this.app.secretStorage) {
+			const secret = this.app.secretStorage.getSecret(this.settings.apiKeySecret);
 			if (secret) {
 				return secret;
 			}
 		}
-		return this.settings.password || '';
+		return this.settings.apiKey || '';
 	}
 
 	async testConnection(): Promise<void> {
-		const password = await this.getPassword();
-		if (!this.settings.serverUrl || !this.settings.username || !password) {
-			throw new Error(
-				'Server URL, username, and password are all required.',
-			);
+		const apiKey = await this.getApiKey();
+		if (!this.settings.serverUrl || !apiKey) {
+			throw new Error('Server URL and API key are both required.');
 		}
 
-		this.client = new BookOrbitClient(
-			this.settings.serverUrl,
-			this.settings.username,
-			password,
-		);
+		this.client = new BookOrbitClient(this.settings.serverUrl, apiKey);
 		await this.client.testConnection();
 	}
 
 	private async openSearchModal(): Promise<void> {
-		const password = await this.getPassword();
-		if (!this.settings.serverUrl || !this.settings.username || !password) {
+		const apiKey = await this.getApiKey();
+		if (!this.settings.serverUrl || !apiKey) {
 			new Notice('Please configure your BookOrbit connection in settings.');
 			return;
 		}
 
 		// Initialize client if not already
 		if (!this.client) {
-			this.client = new BookOrbitClient(
-				this.settings.serverUrl,
-				this.settings.username,
-				password,
-			);
+			this.client = new BookOrbitClient(this.settings.serverUrl, apiKey);
 		}
 		const client = this.client;
 
@@ -208,18 +203,14 @@ export default class BookOrbitPlugin extends Plugin {
 			return;
 		}
 
-		const password = await this.getPassword();
-		if (!this.settings.serverUrl || !this.settings.username || !password) {
+		const apiKey = await this.getApiKey();
+		if (!this.settings.serverUrl || !apiKey) {
 			new Notice('Please configure your BookOrbit connection in settings.');
 			return;
 		}
 
 		if (!this.client) {
-			this.client = new BookOrbitClient(
-				this.settings.serverUrl,
-				this.settings.username,
-				password,
-			);
+			this.client = new BookOrbitClient(this.settings.serverUrl, apiKey);
 		}
 
 		try {

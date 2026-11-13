@@ -8,13 +8,17 @@ vi.mock('obsidian', () => ({
 }));
 
 import { BookOrbitClient } from './client';
-import { BookOrbitAuthError, BookOrbitNetworkError } from './errors';
+import {
+	BookOrbitAuthError,
+	BookOrbitNetworkError,
+	BookOrbitResponseError,
+} from './errors';
 
 interface MockCall {
 	url: string;
 	method: string;
 	headers: Record<string, string>;
-	body: string;
+	body?: string;
 }
 
 function callArgs(index: number): MockCall {
@@ -46,318 +50,124 @@ describe('BookOrbitClient auth', () => {
 		requestUrlMock.mockReset();
 	});
 
-	it('sends clientKind native and reads tokens from the login body', async () => {
-		requestUrlMock.mockResolvedValue(
-			jsonResponse(200, {
-				accessToken: 'access-1',
-				accessTokenExpiresAt: '2026-10-08T00:30:00Z',
-				refreshToken: 'refresh-1',
-				refreshTokenExpiresAt: '2026-10-15T00:00:00Z',
-				sessionId: 7,
-			}),
-		);
+	it('testConnection calls auth/me with the API key header', async () => {
+		requestUrlMock.mockResolvedValue(jsonResponse(200, { id: 1 }));
 
-		const client = new BookOrbitClient(
-			'https://example.com/',
-			'user',
-			'pass',
-		);
-		await client.login();
+		const client = new BookOrbitClient('https://example.com/', 'secret-key');
+		await client.testConnection();
 
 		expect(requestUrlMock).toHaveBeenCalledTimes(1);
 		const call = callArgs(0);
-		expect(call.url).toBe('https://example.com/api/v1/auth/login');
-		expect(call.method).toBe('POST');
-		expect(call.headers['Content-Type']).toBe('application/json');
-		expect(JSON.parse(call.body)).toEqual({
-			username: 'user',
-			password: 'pass',
-			clientKind: 'native',
-		});
+		expect(call.url).toBe('https://example.com/api/v1/auth/me');
+		expect(call.method).toBe('GET');
+		expect(call.headers['X-Api-Key']).toBe('secret-key');
 	});
 
-	it('refreshes by sending the refresh token in the body, not a Cookie header', async () => {
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-1',
-				refreshToken: 'refresh-1',
-			}),
-		);
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-2',
-				refreshToken: 'refresh-2',
-			}),
-		);
-
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-		await client.login();
-		await client.refresh();
-
-		const refreshCall = callArgs(1);
-		expect(refreshCall.url).toBe(
-			'https://example.com/api/v1/auth/refresh',
-		);
-		expect(refreshCall.method).toBe('POST');
-		expect(JSON.parse(refreshCall.body)).toEqual({
-			refreshToken: 'refresh-1',
-		});
-		expect(refreshCall.headers.Cookie).toBeUndefined();
-	});
-
-	it('rotates the refresh token from the refresh response body', async () => {
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-1',
-				refreshToken: 'refresh-1',
-			}),
-		);
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-2',
-				refreshToken: 'refresh-2',
-			}),
-		);
+	it('throws an auth error with the server message on a 401', async () => {
 		requestUrlMock.mockResolvedValue(
-			jsonResponse(200, {
-				accessToken: 'access-3',
-				refreshToken: 'refresh-3',
-			}),
+			jsonResponse(401, { message: 'Invalid API key' }),
 		);
 
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-		await client.login();
-		await client.refresh();
-		await client.refresh();
+		const client = new BookOrbitClient('https://example.com', 'bad-key');
 
-		const secondRefreshCall = callArgs(2);
-		expect(JSON.parse(secondRefreshCall.body)).toEqual({
-			refreshToken: 'refresh-2',
-		});
+		await expect(client.testConnection()).rejects.toBeInstanceOf(
+			BookOrbitAuthError,
+		);
+		await expect(client.testConnection()).rejects.toThrow(
+			'Invalid API key',
+		);
 	});
 
-	it('falls back to a case-insensitive Set-Cookie header when the body has no refresh token', async () => {
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(
-				200,
-				{ accessToken: 'access-cookie', sessionId: 1 },
-				{ 'SET-COOKIE': 'refresh_token=cookie-token; HttpOnly; Path=/api/v1/auth' },
-			),
-		);
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-2',
-				refreshToken: 'refresh-2',
-			}),
-		);
-
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-		await client.login();
-		await client.refresh();
-
-		const refreshCall = callArgs(1);
-		expect(JSON.parse(refreshCall.body)).toEqual({
-			refreshToken: 'cookie-token',
-		});
-		expect(refreshCall.headers.Cookie).toBeUndefined();
-	});
-
-	it('handles lowercase set-cookie header casing', async () => {
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(
-				200,
-				{ accessToken: 'access-lower' },
-				{ 'set-cookie': 'refresh_token=lower-token; HttpOnly' },
-			),
-		);
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-2',
-				refreshToken: 'refresh-2',
-			}),
-		);
-
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-		await client.login();
-		await client.refresh();
-
-		const refreshCall = callArgs(1);
-		expect(JSON.parse(refreshCall.body)).toEqual({
-			refreshToken: 'lower-token',
-		});
-	});
-
-	it('throws an auth error with the server message on login failure', async () => {
+	it('throws a response error on non-200, non-401 statuses', async () => {
 		requestUrlMock.mockResolvedValue(
-			jsonResponse(401, { message: 'Invalid credentials' }),
+			jsonResponse(500, { message: 'Internal server error' }),
 		);
 
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
+		const client = new BookOrbitClient('https://example.com', 'key');
+
+		await expect(client.testConnection()).rejects.toBeInstanceOf(
+			BookOrbitResponseError,
 		);
-
-		await expect(client.login()).rejects.toBeInstanceOf(BookOrbitAuthError);
-		await expect(client.login()).rejects.toThrow('Invalid credentials');
-	});
-
-	it('throws an auth error when the login body has no access token', async () => {
-		requestUrlMock.mockResolvedValue(
-			jsonResponse(200, { refreshToken: 'only-refresh' }),
-		);
-
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-
-		await expect(client.login()).rejects.toBeInstanceOf(BookOrbitAuthError);
-		await expect(client.login()).rejects.toThrow(
-			'Login response did not contain an access token.',
+		await expect(client.testConnection()).rejects.toThrow(
+			'Internal server error',
 		);
 	});
 
 	it('wraps network failures in a network error', async () => {
 		requestUrlMock.mockRejectedValue(new Error('Connection refused'));
 
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
+		const client = new BookOrbitClient('https://example.com', 'key');
 
-		await expect(client.login()).rejects.toBeInstanceOf(
+		await expect(client.testConnection()).rejects.toBeInstanceOf(
 			BookOrbitNetworkError,
 		);
-		await expect(client.login()).rejects.toThrow('Connection refused');
-	});
-
-	it('testConnection propagates the real error', async () => {
-		requestUrlMock.mockResolvedValue(
-			jsonResponse(500, { message: 'Internal server error' }),
-		);
-
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-
 		await expect(client.testConnection()).rejects.toThrow(
-			'Internal server error',
+			'Connection refused',
 		);
 	});
 
-	it('searchBooks sends the access token as a bearer token', async () => {
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-1',
-				refreshToken: 'refresh-1',
-			}),
-		);
-		requestUrlMock.mockResolvedValueOnce(
+	it('searchBooks sends the API key header', async () => {
+		requestUrlMock.mockResolvedValue(
 			jsonResponse(200, [{ id: 1, title: 'Book' }]),
 		);
 
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-		await client.searchBooks('query', 10);
+		const client = new BookOrbitClient('https://example.com', 'secret-key');
+		const results = await client.searchBooks('query', 10);
 
-		const searchCall = callArgs(1);
-		expect(searchCall.url).toBe(
+		expect(results).toEqual([{ id: 1, title: 'Book' }]);
+		const call = callArgs(0);
+		expect(call.url).toBe(
 			'https://example.com/api/v1/books/search?q=query&limit=10',
 		);
-		expect(searchCall.headers.Authorization).toBe('Bearer access-1');
+		expect(call.headers['X-Api-Key']).toBe('secret-key');
+		expect(call.headers.Authorization).toBeUndefined();
 	});
 
-	it('searchBooks refreshes the token on a 401 and retries', async () => {
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-1',
-				refreshToken: 'refresh-1',
-			}),
-		);
-		// First search attempt: 401
-		requestUrlMock.mockResolvedValueOnce(jsonResponse(401, {}));
-		// Refresh succeeds
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-2',
-				refreshToken: 'refresh-2',
-			}),
-		);
-		// Retry succeeds
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, [{ id: 2, title: 'Book 2' }]),
-		);
+	it('searchBooks throws an auth error on a 401', async () => {
+		requestUrlMock.mockResolvedValue(jsonResponse(401, {}));
 
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-		const results = await client.searchBooks('query', 10);
+		const client = new BookOrbitClient('https://example.com', 'bad-key');
 
-		expect(results).toEqual([{ id: 2, title: 'Book 2' }]);
-		const retryCall = callArgs(3);
-		expect(retryCall.headers.Authorization).toBe('Bearer access-2');
+		await expect(client.searchBooks('query', 10)).rejects.toBeInstanceOf(
+			BookOrbitAuthError,
+		);
 	});
 
-	it('searchBooks falls back to a full login when refresh fails on a 401', async () => {
-		requestUrlMock.mockResolvedValueOnce(
+	it('getBookDetail sends the API key header', async () => {
+		requestUrlMock.mockResolvedValue(
 			jsonResponse(200, {
-				accessToken: 'access-1',
-				refreshToken: 'refresh-1',
+				id: 5,
+				title: 'Book',
+				authors: [],
+				genres: [],
+				communityRatings: [],
+				providerIds: {},
+				readStatus: null,
 			}),
 		);
-		// First search attempt: 401
-		requestUrlMock.mockResolvedValueOnce(jsonResponse(401, {}));
-		// Refresh fails
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(401, { message: 'Refresh token revoked' }),
-		);
-		// Full login succeeds
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, {
-				accessToken: 'access-3',
-				refreshToken: 'refresh-3',
-			}),
-		);
-		// Retry succeeds
-		requestUrlMock.mockResolvedValueOnce(
-			jsonResponse(200, [{ id: 3, title: 'Book 3' }]),
+
+		const client = new BookOrbitClient('https://example.com', 'secret-key');
+		const book = await client.getBookDetail(5);
+
+		expect(book.id).toBe(5);
+		const call = callArgs(0);
+		expect(call.url).toBe('https://example.com/api/v1/books/5');
+		expect(call.headers['X-Api-Key']).toBe('secret-key');
+	});
+
+	it('downloadCover sends the API key header', async () => {
+		requestUrlMock.mockResolvedValue(
+			jsonResponse(200, {}, { 'content-type': 'image/jpeg' }),
 		);
 
-		const client = new BookOrbitClient(
-			'https://example.com',
-			'user',
-			'pass',
-		);
-		const results = await client.searchBooks('query', 10);
+		const client = new BookOrbitClient('https://example.com', 'secret-key');
+		const cover = await client.downloadCover(5);
 
-		expect(results).toEqual([{ id: 3, title: 'Book 3' }]);
-		const retryCall = callArgs(4);
-		expect(retryCall.headers.Authorization).toBe('Bearer access-3');
+		expect(cover).not.toBeNull();
+		const call = callArgs(0);
+		expect(call.url).toBe(
+			'https://example.com/api/v1/books/5/thumbnail',
+		);
+		expect(call.headers['X-Api-Key']).toBe('secret-key');
 	});
 });

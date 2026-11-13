@@ -3,8 +3,6 @@ import type {
 	BookDetail,
 	BookSearchResult,
 	BookData,
-	RefreshResponse,
-	LoginResponse,
 } from './types';
 import {
 	BookOrbitAuthError,
@@ -12,25 +10,6 @@ import {
 	BookOrbitNotFoundError,
 	BookOrbitResponseError,
 } from './errors';
-
-function extractRefreshTokenFromHeaders(
-	headers: Record<string, string> | undefined,
-): string | null {
-	if (!headers) {
-		return null;
-	}
-	// The set-cookie header may be exposed as a single string or, on
-	// some platforms, as several values. Collect every value so the
-	// refresh_token cookie is found regardless of ordering.
-	const values: string[] = [];
-	for (const [key, value] of Object.entries(headers)) {
-		if (key.toLowerCase() === 'set-cookie') {
-			values.push(value);
-		}
-	}
-	const match = values.join('; ').match(/refresh_token=([^;]+)/);
-	return match?.[1] ?? null;
-}
 
 function extractErrorMessage(response: {
 	json?: unknown;
@@ -44,136 +23,58 @@ function extractErrorMessage(response: {
 
 export class BookOrbitClient {
 	private baseUrl: string;
-	private username: string;
-	private password: string;
-	private accessToken: string | null = null;
-	private refreshToken: string | null = null;
+	private apiKey: string;
 
-	constructor(baseUrl: string, username: string, password: string) {
+	constructor(baseUrl: string, apiKey: string) {
 		this.baseUrl = baseUrl.replace(/\/$/, '');
-		this.username = username;
-		this.password = password;
+		this.apiKey = apiKey;
 	}
 
-	private async ensureAuth(): Promise<string> {
-		if (this.accessToken) {
-			return this.accessToken;
-		}
-		await this.login();
-		if (!this.accessToken) {
-			throw new BookOrbitAuthError('Failed to obtain access token');
-		}
-		return this.accessToken;
+	private authHeaders(): Record<string, string> {
+		return { 'X-Api-Key': this.apiKey };
 	}
 
-	async login(): Promise<void> {
-		try {
-			const response = await requestUrl({
-				url: `${this.baseUrl}/api/v1/auth/login`,
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					username: this.username,
-					password: this.password,
-					clientKind: 'native',
-				}),
-				throw: false,
-			});
-
-			if (response.status !== 200) {
-				const detail = extractErrorMessage(response);
-				if (response.status === 401) {
-					throw new BookOrbitAuthError(
-						detail ?? 'Login failed: invalid username or password.',
-					);
-				}
-				throw new BookOrbitAuthError(
-					detail ?? `Login failed (HTTP ${response.status}).`,
-				);
-			}
-
-			const data = response.json as LoginResponse | null | undefined;
-			const accessToken = data?.accessToken;
-			if (!accessToken) {
-				throw new BookOrbitAuthError(
-					'Login response did not contain an access token.',
-				);
-			}
-			this.accessToken = accessToken;
-
-			// Prefer the refresh token from the JSON body, which BookOrbit
-			// returns for native clients (clientKind: 'native'). Fall back to
-			// the Set-Cookie header only for servers that deliver it solely as
-			// a cookie. Reading Set-Cookie is unreliable on Obsidian mobile, so
-			// the body path is the one that works on iOS.
-			this.refreshToken =
-				data?.refreshToken ??
-				extractRefreshTokenFromHeaders(response.headers) ??
-				null;
-		} catch (error) {
-			if (error instanceof BookOrbitAuthError) {
-				throw error;
-			}
-			throw new BookOrbitNetworkError(
-				`Network error during login: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		}
-	}
-
-	async refresh(): Promise<void> {
-		if (!this.refreshToken) {
-			throw new BookOrbitAuthError(
-				'No refresh token available. Please log in again.',
-			);
-		}
-		try {
-			const response = await requestUrl({
-				url: `${this.baseUrl}/api/v1/auth/refresh`,
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ refreshToken: this.refreshToken }),
-				throw: false,
-			});
-
-			if (response.status !== 200) {
-				const detail = extractErrorMessage(response);
-				throw new BookOrbitAuthError(
-					detail ??
-						`Session expired (HTTP ${response.status}). Please log in again.`,
-				);
-			}
-
-			const data = response.json as RefreshResponse | null | undefined;
-			const accessToken = data?.accessToken;
-			if (!accessToken) {
-				throw new BookOrbitAuthError(
-					'Refresh response did not contain an access token.',
-				);
-			}
-			this.accessToken = accessToken;
-			// BookOrbit rotates the refresh token on each refresh for native
-			// sessions; use the new one when the server returns it.
-			if (data?.refreshToken) {
-				this.refreshToken = data.refreshToken;
-			}
-		} catch (error) {
-			if (error instanceof BookOrbitAuthError) {
-				throw error;
-			}
-			throw new BookOrbitNetworkError(
-				`Network error during token refresh: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		}
+	private authError(response: { json?: unknown }): BookOrbitAuthError {
+		return new BookOrbitAuthError(
+			extractErrorMessage(response) ??
+				'Authentication failed. Check your BookOrbit API key.',
+		);
 	}
 
 	async testConnection(): Promise<void> {
-		await this.login();
+		try {
+			const response = await requestUrl({
+				url: `${this.baseUrl}/api/v1/auth/me`,
+				method: 'GET',
+				headers: this.authHeaders(),
+				throw: false,
+			});
+
+			if (response.status === 401) {
+				throw this.authError(response);
+			}
+
+			if (response.status !== 200) {
+				throw new BookOrbitResponseError(
+					extractErrorMessage(response) ??
+						`Connection test failed (HTTP ${response.status}).`,
+				);
+			}
+		} catch (error) {
+			if (
+				error instanceof BookOrbitAuthError ||
+				error instanceof BookOrbitResponseError
+			) {
+				throw error;
+			}
+			throw new BookOrbitNetworkError(
+				`Network error during connection test: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
 	}
 
 	async searchBooks(query: string, limit: number): Promise<BookSearchResult[]> {
 		try {
-			const token = await this.ensureAuth();
-
 			const searchUrl = new URL(`${this.baseUrl}/api/v1/books/search`);
 			searchUrl.searchParams.set('q', query);
 			searchUrl.searchParams.set('limit', String(limit));
@@ -182,21 +83,14 @@ export class BookOrbitClient {
 				url: searchUrl.toString(),
 				method: 'GET',
 				headers: {
-					Authorization: `Bearer ${token}`,
+					...this.authHeaders(),
 					'Content-Type': 'application/json',
 				},
 				throw: false,
 			});
 
 			if (response.status === 401) {
-				// Token expired: try a refresh, then fall back to a full login.
-				this.accessToken = null;
-				try {
-					await this.refresh();
-				} catch {
-					await this.login();
-				}
-				return this.searchBooks(query, limit);
+				throw this.authError(response);
 			}
 
 			if (response.status !== 200) {
@@ -207,7 +101,10 @@ export class BookOrbitClient {
 
 			return response.json as BookSearchResult[];
 		} catch (error) {
-			if (error instanceof BookOrbitResponseError) {
+			if (
+				error instanceof BookOrbitAuthError ||
+				error instanceof BookOrbitResponseError
+			) {
 				throw error;
 			}
 			throw new BookOrbitNetworkError(
@@ -218,27 +115,18 @@ export class BookOrbitClient {
 
 	async getBookDetail(id: number, statusMap?: Record<string, string>): Promise<BookData> {
 		try {
-			const token = await this.ensureAuth();
-
 			const response = await requestUrl({
 				url: `${this.baseUrl}/api/v1/books/${id}`,
 				method: 'GET',
 				headers: {
-					Authorization: `Bearer ${token}`,
+					...this.authHeaders(),
 					'Content-Type': 'application/json',
 				},
 				throw: false,
 			});
 
 			if (response.status === 401) {
-				// Token expired: try a refresh, then fall back to a full login.
-				this.accessToken = null;
-				try {
-					await this.refresh();
-				} catch {
-					await this.login();
-				}
-				return this.getBookDetail(id, statusMap);
+				throw this.authError(response);
 			}
 
 			if (response.status === 404) {
@@ -255,6 +143,7 @@ export class BookOrbitClient {
 			return this.mapToBookData(detail, statusMap);
 		} catch (error) {
 			if (
+				error instanceof BookOrbitAuthError ||
 				error instanceof BookOrbitResponseError ||
 				error instanceof BookOrbitNotFoundError
 			) {
@@ -270,26 +159,15 @@ export class BookOrbitClient {
 		id: number,
 	): Promise<{ data: ArrayBuffer; contentType: string } | null> {
 		try {
-			const token = await this.ensureAuth();
-
 			const response = await requestUrl({
 				url: `${this.baseUrl}/api/v1/books/${id}/thumbnail`,
 				method: 'GET',
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
+				headers: this.authHeaders(),
 				throw: false,
 			});
 
 			if (response.status === 401) {
-				// Token expired: try a refresh, then fall back to a full login.
-				this.accessToken = null;
-				try {
-					await this.refresh();
-				} catch {
-					await this.login();
-				}
-				return this.downloadCover(id);
+				throw this.authError(response);
 			}
 
 			if (response.status === 404) {
@@ -310,7 +188,10 @@ export class BookOrbitClient {
 				contentType,
 			};
 		} catch (error) {
-			if (error instanceof BookOrbitResponseError) {
+			if (
+				error instanceof BookOrbitAuthError ||
+				error instanceof BookOrbitResponseError
+			) {
 				throw error;
 			}
 			throw new BookOrbitNetworkError(

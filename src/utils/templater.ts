@@ -17,7 +17,7 @@ function getTemplaterPlugin(app: App): TemplaterPlugin | null {
 		return null;
 	}
 
-	return candidate as TemplaterPlugin;
+	return candidate;
 }
 
 export function hasTemplaterPlugin(app: App): boolean {

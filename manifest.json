@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-bookorbit-book-notes",
 	"name": "BookOrbit Book Notes",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"minAppVersion": "1.11.4",
 	"description": "Search your BookOrbit instance and create book notes from a configurable template.",
 	"author": "koikurasu",
